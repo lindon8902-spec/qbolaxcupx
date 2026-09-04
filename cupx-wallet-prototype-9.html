@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CUPx — Prototipo de Wallet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+<style>
+  :root{
+    --ink:#0E1B2A;
+    --panel:#123B3D;
+    --panel-2:#16474A;
+    --coral:#E4693B;
+    --gold:#C9A66B;
+    --bone:#F2ECE0;
+    --mint:#4ADE80;
+    --dim:#8FA8A6;
+    --line:rgba(242,236,224,0.09);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--ink); color:var(--bone);
+    font-family:'Space Grotesk',sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ max-width:480px; margin:0 auto; padding:28px 20px 60px; }
+
+  header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .mark{
+    width:34px; height:34px; border-radius:50%;
+    background:conic-gradient(from 180deg, var(--gold), var(--coral), var(--gold));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces',serif; font-weight:700; font-size:15px; color:var(--ink);
+  }
+  .brand-name{ font-family:'Fraunces',serif; font-weight:600; font-size:19px; letter-spacing:0.2px; }
+  .sim-badge{
+    font-size:10.5px; text-transform:uppercase; letter-spacing:0.08em;
+    color:var(--dim); border:1px solid var(--line); padding:5px 9px; border-radius:20px;
+  }
+  .conn-toggle{
+    display:flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--line);
+    padding:6px 10px; border-radius:20px; cursor:pointer; font-size:11.5px; user-select:none;
+  }
+  .conn-dot{ width:8px; height:8px; border-radius:50%; flex:none; transition:background .2s ease; }
+  .conn-dot.online{ background:var(--mint); box-shadow:0 0 8px var(--mint); }
+  .conn-dot.offline{ background:var(--coral); box-shadow:0 0 8px var(--coral); }
+  .conn-banner{
+    display:flex; align-items:center; gap:10px; padding:11px 16px; border-radius:14px;
+    margin-bottom:16px; font-size:12.5px; border:1px solid; transition:all .25s ease;
+  }
+  .conn-banner.offline{ background:rgba(228,105,59,0.1); border-color:rgba(228,105,59,0.35); color:#F3B69B; }
+  .conn-banner.online{ display:none; }
+  .sms-pill{
+    font-size:9.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--coral);
+    border:1px solid rgba(228,105,59,0.4); padding:1px 6px; border-radius:8px; margin-left:6px;
+  }
+  .li-desc .sms-pill{ vertical-align:middle; }
+  .sms-progress{ font-size:11px; color:var(--dim); font-family:'JetBrains Mono',monospace; }
+
+  /* Alertas de seguridad */
+  .alerts-panel{ display:flex; flex-direction:column; gap:8px; }
+  .alerts-empty{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px;
+    color:var(--dim); font-size:12px; text-align:center;
+  }
+  .alert-item{
+    display:flex; align-items:flex-start; gap:10px; background:rgba(228,105,59,0.08);
+    border:1px solid rgba(228,105,59,0.3); border-radius:12px; padding:11px 14px;
+  }
+  .alert-item .ico{ font-size:14px; margin-top:1px; }
+  .alert-item .txt{ flex:1; font-size:12px; color:var(--bone); line-height:1.4; }
+  .alert-item .time{ font-size:10px; color:var(--dim); font-family:'JetBrains Mono',monospace; white-space:nowrap; }
+  .limit-note{ font-size:10.5px; color:var(--dim); margin-top:6px; font-family:'JetBrains Mono',monospace; }
+  .warn-banner{
+    background:rgba(228,105,59,0.1); border:1px solid rgba(228,105,59,0.4); color:#F3B69B;
+    border-radius:10px; padding:11px 13px; font-size:11.5px; line-height:1.5; margin:2px 0 14px;
+  }
+  .warn-banner b{ color:#FFD9C4; }
+  .user-pill{
+    display:flex; align-items:center; gap:7px; background:var(--panel); border:1px solid var(--line);
+    padding:6px 10px 6px 6px; border-radius:20px; cursor:pointer; font-size:12px;
+  }
+  .shield-btn{
+    width:34px; height:34px; border-radius:50%; background:var(--panel); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; font-size:15px; cursor:pointer;
+  }
+  .sec-section{ margin-bottom:16px; }
+  .sec-head{ display:flex; align-items:center; gap:9px; margin-bottom:8px; }
+  .sec-num{
+    width:24px; height:24px; border-radius:50%; background:var(--mint); color:var(--ink);
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex:none;
+  }
+  .sec-title{ font-size:13.5px; font-weight:600; color:var(--bone); }
+  .sec-list{ margin:0; padding-left:33px; font-size:12px; color:var(--dim); line-height:1.7; }
+  .sec-pending{
+    background:rgba(228,105,59,0.08); border:1px solid rgba(228,105,59,0.3); border-radius:12px;
+    padding:13px 15px; margin-top:6px;
+  }
+  .sec-pending .sec-title{ color:#F3B69B; }
+  .sec-pending ul{ margin:6px 0 0; padding-left:18px; font-size:11.5px; color:var(--dim); line-height:1.6; }
+  .seed-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .seed-chip{
+    background:rgba(242,236,224,0.05); border:1px solid var(--line); border-radius:8px;
+    padding:9px 10px; font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--bone);
+    display:flex; align-items:center; gap:6px;
+  }
+  .seed-n{ color:var(--gold); font-size:10px; font-weight:700; min-width:14px; }
+  .sec-link-btn{
+    display:block; width:100%; text-align:center; background:rgba(201,166,107,0.1); border:1px solid rgba(201,166,107,0.35);
+    color:var(--gold); border-radius:10px; padding:11px; font-size:13px; font-weight:600; cursor:pointer; margin-top:4px;
+  }
+  .user-pill .avatar{
+    width:22px; height:22px; border-radius:50%; background:var(--gold); color:var(--ink);
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:11px;
+  }
+
+  /* Login / selector de usuario */
+  .login-screen{
+    position:fixed; inset:0; background:var(--ink); z-index:100;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px;
+  }
+  .login-card{ width:100%; max-width:380px; }
+  .login-title{ font-family:'Fraunces',serif; font-size:26px; font-weight:600; text-align:center; margin-bottom:6px; }
+  .login-sub{ text-align:center; color:var(--dim); font-size:13px; margin-bottom:28px; }
+  .user-list{ display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
+  .user-row{
+    display:flex; align-items:center; gap:12px; background:var(--panel); border:1px solid var(--line);
+    border-radius:14px; padding:13px 16px; cursor:pointer; transition:border-color .12s ease;
+  }
+  .user-row:hover{ border-color:var(--gold); }
+  .user-row .avatar{
+    width:38px; height:38px; border-radius:50%; background:var(--gold); color:var(--ink);
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-family:'Fraunces',serif;
+  }
+  .user-row .info b{ display:block; font-size:14px; }
+  .user-row .info span{ display:block; font-size:11.5px; color:var(--dim); font-family:'JetBrains Mono',monospace; margin-top:2px;}
+  .new-user-row{
+    display:flex; align-items:center; justify-content:center; gap:8px; border:1px dashed var(--line);
+    border-radius:14px; padding:13px; cursor:pointer; color:var(--dim); font-size:13px;
+  }
+  .new-user-row:hover{ color:var(--bone); border-color:var(--gold); }
+
+  .balance-card{
+    background:linear-gradient(155deg, var(--panel), var(--panel-2));
+    border:1px solid var(--line); border-radius:20px; padding:26px 24px;
+    margin-bottom:16px;
+  }
+  .balance-label{ font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px;}
+  .balance-value{ font-family:'Fraunces',serif; font-weight:600; font-size:42px; line-height:1; }
+  .balance-value span{ font-size:20px; color:var(--dim); font-weight:400; margin-left:6px;}
+  .balance-usd{ margin-top:8px; font-size:13.5px; color:var(--dim); font-family:'JetBrains Mono',monospace; }
+  .faucet-link{
+    margin-top:12px; display:inline-block; font-size:11.5px; color:var(--gold);
+    border:1px dashed rgba(201,166,107,0.4); padding:5px 11px; border-radius:20px; cursor:pointer;
+  }
+  .faucet-link:hover{ border-style:solid; }
+
+  .actions{ display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; margin-bottom:22px; }
+  .action-btn{
+    background:var(--panel); border:1px solid var(--line); color:var(--bone);
+    border-radius:14px; padding:14px 6px; font-size:12.5px; font-weight:500;
+    display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer;
+    transition:transform .12s ease, border-color .12s ease;
+  }
+  .action-btn:hover{ border-color:var(--gold); transform:translateY(-1px); }
+  .action-btn .ico{ font-size:18px; }
+  .action-btn.primary{ background:var(--coral); border-color:var(--coral); color:var(--ink); font-weight:600;}
+
+  .section-title{
+    font-size:12px; text-transform:uppercase; letter-spacing:0.09em; color:var(--dim);
+    margin:26px 0 10px 2px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .live-indicator{
+    display:flex; align-items:center; gap:6px; text-transform:none; letter-spacing:normal;
+    font-size:10.5px; color:var(--dim); font-family:'JetBrains Mono',monospace;
+  }
+  .live-dot{
+    width:6px; height:6px; border-radius:50%; background:var(--mint);
+    animation:livePulse 2.5s ease-in-out infinite;
+  }
+  @keyframes livePulse{ 0%,100%{opacity:1; box-shadow:0 0 0 0 rgba(74,222,128,0.5);} 50%{opacity:0.4; box-shadow:0 0 0 4px rgba(74,222,128,0);} }
+
+  /* Respaldo — signature element */
+  .reserve-card{
+    background:linear-gradient(155deg, var(--panel), var(--panel-2));
+    border:1px solid var(--line); border-radius:22px; padding:24px;
+  }
+  .reserve-top{ display:flex; align-items:center; gap:22px; margin-bottom:20px; }
+  .gauge{ position:relative; width:96px; height:96px; flex:none; }
+  .gauge.gauge-lg{ width:128px; height:128px; }
+  .gauge svg{ transform:rotate(-90deg); }
+  .gauge-track{ fill:none; stroke:rgba(242,236,224,0.08); stroke-width:9; }
+  .gauge.gauge-lg .gauge-track{ stroke-width:10; }
+  .gauge-fill{ fill:none; stroke:var(--mint); stroke-width:9; stroke-linecap:round; transition:stroke-dashoffset .8s ease; }
+  .gauge.gauge-lg .gauge-fill{ stroke-width:10; filter:drop-shadow(0 0 6px rgba(74,222,128,0.5)); }
+  .gauge-label{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .gauge-pct{ font-family:'Fraunces',serif; font-weight:700; font-size:20px; }
+  .gauge.gauge-lg .gauge-pct{ font-size:28px; }
+  .gauge-pct-sub{ font-size:9px; color:var(--dim); text-transform:uppercase; letter-spacing:0.06em; }
+  .reserve-summary{ flex:1; }
+  .reserve-title{ font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px; }
+  .reserve-total{ font-family:'Fraunces',serif; font-weight:700; font-size:30px; color:var(--bone); line-height:1.1; }
+  .reserve-sub{ font-size:11px; color:var(--dim); margin-top:6px; line-height:1.4; }
+
+  .reserve-components{ display:flex; flex-direction:column; gap:12px; margin-bottom:16px; }
+  .rc-item{ }
+  .rc-head{ display:flex; align-items:center; gap:9px; font-size:12.5px; color:var(--bone); margin-bottom:5px; }
+  .rc-head span:nth-child(2){ flex:1; color:var(--dim); }
+  .rc-head b{ font-family:'JetBrains Mono',monospace; font-weight:500; }
+  .rc-ico{
+    width:22px; height:22px; border-radius:7px; display:flex; align-items:center; justify-content:center;
+    font-size:12px; flex:none;
+  }
+  .rc-bar{ height:5px; border-radius:3px; background:rgba(242,236,224,0.07); overflow:hidden; }
+  .rc-fill{ height:100%; border-radius:3px; transition:width .8s ease; }
+
+  .reserve-supply-row{
+    display:flex; justify-content:space-between; font-size:11.5px; color:var(--dim);
+    font-family:'JetBrains Mono',monospace; padding-top:14px; border-top:1px solid var(--line); margin-bottom:16px;
+  }
+  .reserve-supply-row b{ color:var(--bone); font-weight:500; }
+  .dot-mint, .dot-dim{ display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:6px; }
+  .dot-mint{ background:var(--mint); }
+  .dot-dim{ background:var(--gray-txt, #6B7A75); }
+
+  .audit-strip{
+    display:flex; align-items:center; gap:12px; background:rgba(74,222,128,0.07);
+    border:1px solid rgba(74,222,128,0.25); border-radius:14px; padding:12px 14px; cursor:pointer;
+    transition:border-color .15s ease;
+  }
+  .audit-strip:hover{ border-color:rgba(74,222,128,0.5); }
+  .audit-shield{ font-size:20px; flex:none; }
+  .audit-text{ flex:1; min-width:0; }
+  .audit-title{ font-size:12.5px; font-weight:600; color:var(--bone); }
+  .audit-check{ color:var(--mint); font-weight:600; font-size:11px; margin-left:4px; }
+  .audit-sub{ font-size:10.5px; color:var(--dim); margin-top:2px; font-family:'JetBrains Mono',monospace; }
+  .audit-arrow{ color:var(--dim); font-size:20px; flex:none; }
+
+  .audit-log-item{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
+    padding:11px 0; border-bottom:1px solid var(--line); font-size:11.5px;
+  }
+  .audit-log-item:last-child{ border-bottom:none; }
+  .audit-log-item .hash{ color:var(--gold); font-family:'JetBrains Mono',monospace; font-size:10.5px; }
+  .audit-log-item .vals{ color:var(--dim); font-family:'JetBrains Mono',monospace; font-size:10.5px; margin-top:2px; }
+  .audit-log-item .when{ color:var(--dim); font-size:10px; white-space:nowrap; font-family:'JetBrains Mono',monospace; }
+
+  /* Multisig */
+  .multisig-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:18px 20px; margin-bottom:6px;
+  }
+  .ms-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
+  .ms-title{ font-size:14px; font-weight:600; }
+  .ms-amount{ font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--gold); }
+  .ms-steps{ display:flex; gap:8px; }
+  .ms-step{
+    flex:1; text-align:center; padding:10px 4px; border-radius:10px;
+    background:rgba(242,236,224,0.04); border:1px solid var(--line); font-size:11px;
+  }
+  .ms-step.done{ border-color:var(--mint); color:var(--mint); background:rgba(74,222,128,0.08); }
+  .ms-step .role{ display:block; font-weight:600; margin-bottom:3px; color:var(--bone); }
+  .ms-step.done .role{ color:var(--mint); }
+  .ms-cta{
+    margin-top:14px; width:100%; padding:11px; border-radius:10px; border:none;
+    background:var(--coral); color:var(--ink); font-weight:600; font-size:13px; cursor:pointer;
+  }
+  .ms-cta:disabled{ background:rgba(242,236,224,0.08); color:var(--dim); cursor:default; }
+  .ms-done-msg{ text-align:center; font-size:12.5px; color:var(--mint); margin-top:10px; font-family:'JetBrains Mono',monospace;}
+
+  /* Ledger */
+  .ledger{ background:var(--panel); border:1px solid var(--line); border-radius:18px; overflow:hidden; }
+  .ledger-item{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:13px 18px; border-bottom:1px solid var(--line); font-size:12.5px;
+  }
+  .ledger-item:last-child{ border-bottom:none; }
+  .li-left{ display:flex; align-items:center; gap:10px; }
+  .li-dot{ width:7px; height:7px; border-radius:50%; }
+  .li-dot.blink{ animation:blink 1s infinite; }
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  .li-desc b{ font-family:'JetBrains Mono',monospace; font-weight:500; }
+  .li-sub{ color:var(--dim); font-size:11px; margin-top:2px; }
+  .li-amt{ font-family:'JetBrains Mono',monospace; font-weight:500; }
+  .li-amt.pos{ color:var(--mint); }
+  .li-amt.neg{ color:var(--coral); }
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(14,27,42,0.72); backdrop-filter:blur(3px);
+    display:flex; align-items:flex-end; justify-content:center; z-index:50;
+  }
+  .modal{
+    background:var(--panel-2); border-radius:22px 22px 0 0; padding:24px 22px 30px;
+    width:100%; max-width:480px; border-top:1px solid var(--line);
+  }
+  .modal-title{ font-family:'Fraunces',serif; font-size:19px; font-weight:600; margin-bottom:16px;}
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:11.5px; color:var(--dim); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;}
+  .field input, .field select{
+    width:100%; background:rgba(242,236,224,0.05); border:1px solid var(--line); color:var(--bone);
+    padding:12px 14px; border-radius:10px; font-size:14px; font-family:'JetBrains Mono',monospace;
+  }
+  .modal-actions{ display:flex; gap:10px; margin-top:18px; }
+  .btn{ flex:1; padding:13px; border-radius:11px; border:none; font-weight:600; font-size:13.5px; cursor:pointer; }
+  .btn-ghost{ background:transparent; border:1px solid var(--line); color:var(--bone); }
+  .btn-solid{ background:var(--coral); color:var(--ink); }
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background:var(--mint); color:var(--ink); padding:11px 20px; border-radius:30px;
+    font-size:13px; font-weight:600; z-index:60; opacity:0; pointer-events:none; transition:opacity .25s ease;
+  }
+  .toast.show{ opacity:1; }
+  footer{ text-align:center; color:var(--dim); font-size:11px; margin-top:30px; line-height:1.6; }
+
+  /* QR */
+  .qr-frame{
+    background:var(--bone); border-radius:16px; padding:16px; display:flex;
+    align-items:center; justify-content:center; margin:6px 0 14px;
+  }
+  .qr-frame canvas{ display:block; }
+  .qr-caption{ text-align:center; font-size:12px; color:var(--dim); margin-bottom:16px; font-family:'JetBrains Mono',monospace; }
+  .copy-row{
+    display:flex; align-items:center; gap:8px; background:rgba(242,236,224,0.05); border:1px solid var(--line);
+    border-radius:12px; padding:11px 14px; margin-bottom:16px;
+  }
+  .copy-row .addr-text{ flex:1; font-family:'JetBrains Mono',monospace; font-size:12.5px; color:var(--bone); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .copy-btn{
+    flex:none; background:var(--gold); color:var(--ink); border:none; border-radius:8px;
+    padding:7px 12px; font-size:11.5px; font-weight:600; cursor:pointer; transition:background .15s ease;
+  }
+  .copy-btn.copied{ background:var(--mint); }
+  .scan-box{
+    position:relative; width:100%; aspect-ratio:1/1; border-radius:16px; overflow:hidden;
+    background:#000; margin-bottom:14px;
+  }
+  .scan-box video{ width:100%; height:100%; object-fit:cover; }
+  .scan-reticle{
+    position:absolute; inset:14%; border:2px solid var(--mint); border-radius:18px;
+    box-shadow:0 0 0 999px rgba(0,0,0,0.35); pointer-events:none;
+  }
+  .scan-status{ text-align:center; font-size:12px; color:var(--dim); margin-bottom:12px; min-height:16px; }
+  .divider-or{ display:flex; align-items:center; gap:10px; margin:16px 0; color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:0.06em;}
+  .divider-or::before, .divider-or::after{ content:''; flex:1; height:1px; background:var(--line); }
+</style>
+</head>
+<body>
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-title">CUPx</div>
+    <div class="login-sub">Selecciona una cuenta demo o crea una nueva para probar la wallet</div>
+    <div class="user-list" id="userList"></div>
+    <div class="new-user-row" onclick="createUser()">+ Crear usuario nuevo</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="mark">Q</div>
+      <div class="brand-name">CUPx</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <div class="shield-btn" onclick="openModal('security')" title="Seguridad">🛡️</div>
+      <div class="user-pill" onclick="showLogin()">
+        <div class="avatar" id="pillAvatar">?</div>
+        <span id="pillName">—</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="conn-toggle" onclick="toggleSimOffline()" style="margin-bottom:14px; width:fit-content;">
+    <div class="conn-dot" id="connDot"></div>
+    <span id="connLabel">En línea</span>
+  </div>
+
+  <div class="conn-banner" id="connBanner">
+    <span>📡</span>
+    <span>Sin conexión detectada — las operaciones se enviarán por SMS al gateway GSM y se confirmarán cuando lleguen.</span>
+  </div>
+
+  <div class="balance-card">
+    <div class="balance-label">Saldo disponible</div>
+    <div class="balance-value" id="balanceVal">0<span>CUPx</span></div>
+    <div class="balance-usd" id="balanceUsd">≈ 0.00 USD</div>
+    <div class="faucet-link" onclick="addTestFunds()">+ Agregar fondos de prueba</div>
+  </div>
+
+  <div class="actions">
+    <div class="action-btn primary" onclick="openModal('receive')"><span class="ico">↓</span>Recibir</div>
+    <div class="action-btn" onclick="openModal('send')"><span class="ico">↑</span>Enviar</div>
+    <div class="action-btn" onclick="openModal('convert')"><span class="ico">⇄</span>Convertir</div>
+    <div class="action-btn" onclick="openModal('scanqr')"><span class="ico">▦</span>Pagar QR</div>
+  </div>
+
+  <div class="section-title">
+    Respaldo del sistema
+    <span class="live-indicator"><span class="live-dot"></span>en vivo · <span id="liveAgo">actualizado ahora</span></span>
+  </div>
+
+  <div class="reserve-card">
+    <div class="reserve-top">
+      <div class="gauge gauge-lg">
+        <svg width="128" height="128" viewBox="0 0 128 128">
+          <circle class="gauge-track" cx="64" cy="64" r="54"></circle>
+          <circle class="gauge-fill" id="gaugeFill" cx="64" cy="64" r="54" stroke-dasharray="339.3" stroke-dashoffset="339.3"></circle>
+        </svg>
+        <div class="gauge-label">
+          <div class="gauge-pct" id="gaugePct">0%</div>
+          <div class="gauge-pct-sub">respaldo digital</div>
+        </div>
+      </div>
+      <div class="reserve-summary">
+        <div class="reserve-title">Reserva total verificada</div>
+        <div class="reserve-total" id="rTotal">$0</div>
+        <div class="reserve-sub">USDT + transferencias + efectivo, frente a CUPx en circulación</div>
+      </div>
+    </div>
+
+    <div class="reserve-components">
+      <div class="rc-item">
+        <div class="rc-head"><span class="rc-ico" style="background:#2E7D5B22; color:#4ADE80;">◈</span><span>USDT en bóveda</span><b id="rUsdt">$0</b></div>
+        <div class="rc-bar"><div class="rc-fill" id="rUsdtBar" style="background:var(--mint); width:0%;"></div></div>
+      </div>
+      <div class="rc-item">
+        <div class="rc-head"><span class="rc-ico" style="background:#C9A66B22; color:var(--gold);">⇄</span><span>Transferencias externas</span><b id="rExt">$0</b></div>
+        <div class="rc-bar"><div class="rc-fill" id="rExtBar" style="background:var(--gold); width:0%;"></div></div>
+      </div>
+      <div class="rc-item">
+        <div class="rc-head"><span class="rc-ico" style="background:#E4693B22; color:var(--coral);">$</span><span>USD en efectivo disponible</span><b id="rCash">$0</b></div>
+        <div class="rc-bar"><div class="rc-fill" id="rCashBar" style="background:var(--coral); width:0%;"></div></div>
+      </div>
+    </div>
+
+    <div class="reserve-supply-row">
+      <div><span class="dot-mint"></span>CUPx activos <b id="rSupply">0</b></div>
+      <div><span class="dot-dim"></span>CUPx quemados (histórico) <b id="rBurned">0</b></div>
+    </div>
+
+    <div class="audit-strip" onclick="openModal('audit')">
+      <span class="audit-shield">🛡️</span>
+      <div class="audit-text">
+        <div class="audit-title">Auditoría en línea <span class="audit-check">✓ verificado</span></div>
+        <div class="audit-sub" id="auditLastLine">Último reporte del Auditor hace unos segundos</div>
+      </div>
+      <span class="audit-arrow">›</span>
+    </div>
+  </div>
+
+  <div class="section-title">Solicitud de emisión (multisig 2 de 3)</div>
+  <div class="multisig-card">
+    <div class="ms-header">
+      <div class="ms-title">Ref. <span id="msRef">—</span></div>
+      <div class="ms-amount" id="msAmount">—</div>
+    </div>
+    <div class="ms-steps">
+      <div class="ms-step" id="stepOperador"><span class="role">Operador</span>pendiente</div>
+      <div class="ms-step" id="stepAuditor"><span class="role">Auditor</span>pendiente</div>
+      <div class="ms-step" id="stepAdmin"><span class="role">Administrador</span>pendiente</div>
+    </div>
+    <button class="ms-cta" id="msCta" onclick="advanceMultisig()">Simular llegada de transferencia</button>
+    <div class="ms-done-msg" id="msDone" style="display:none;">✓ mint() ejecutado on-chain — CUPx acreditado</div>
+  </div>
+
+  <div class="section-title" style="margin-top:26px;">Alertas de seguridad</div>
+  <div class="alerts-panel" id="alertsPanel"></div>
+
+  <div class="section-title" style="margin-top:26px;">Libro contable</div>
+  <div class="ledger" id="ledger"></div>
+
+  <footer>
+    Prototipo de interfaz y lógica — ninguna transacción es real.<br>
+    Los valores se generan localmente para validar el flujo antes de conectar el contrato en testnet.
+  </footer>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" style="display:none;">
+  <div class="modal" id="modalBody"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------------- Frase semilla (BIP-39, demo ilustrativo) ----------------
+// Lista curada de palabras simples y distinguibles para el prototipo.
+// No es la wordlist oficial BIP-39 — es solo para probar el flujo de UX.
+const SEED_WORDLIST = [
+  'abanico','abeja','arbol','arena','avion','barco','bosque','brisa','cactus','cafe',
+  'cambio','campo','carbon','carta','casa','cielo','ciudad','clave','cobre','cohete',
+  'colina','cometa','conejo','coral','cordel','cristal','cuento','delta','desierto','dragon',
+  'druida','duna','enigma','escudo','estrella','faro','fibra','flauta','flecha','fuego',
+  'fuente','gaviota','gemelo','girasol','globo','granito','guitarra','helio','hierro','hoguera',
+  'horizonte','isla','jardin','jazmin','lagarto','lago','lanza','latido','lechuza','leon',
+  'linterna','llave','lluvia','luna','madera','maiz','mango','mapa','marea','mariposa',
+  'martillo','mineral','mirlo','montana','naranja','nieve','nube','oceano','olivo','oro',
+  'oveja','pajaro','palmera','pantano','papel','pez','pino','piragua','planeta','playa',
+  'pluma','puente','quimera','rayo','rio','roble','roca','rueda','sable','salvia',
+  'sendero','silla','sol','tambor','tigre','tornado','tortuga','tren','trigo','tulipan',
+  'valle','vela','venado','viento','vino','volcan','yeso','zafiro','zorro','zumo',
+];
+function generateSeedPhrase(n=12){
+  const pool = [...SEED_WORDLIST];
+  const words = [];
+  for(let i=0;i<n;i++){
+    const idx = Math.floor(Math.random()*pool.length);
+    words.push(pool.splice(idx,1)[0]);
+  }
+  return words;
+}
+
+function randAddr(){
+  const chars = 'abcdefghjkmnpqrstuvwxyz0123456789';
+  let s = 'cupx1';
+  for(let i=0;i<10;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+
+// Estado global del sistema (compartido por todos los usuarios: la reserva es una sola)
+let system = {
+  reserve: { usdt: 9800, ext: 3120 },
+  supply: 11400,          // CUPx activos en circulación
+  totalMinted: 11400,     // CUPx emitidos históricamente (activos + quemados)
+  totalBurned: 0,         // CUPx quemados históricamente (redenciones/conversiones)
+  cashAvailable: 4000,    // USD en efectivo disponible para entregas físicas
+  msStep: 0,
+};
+
+// ---------------- Auditoría en línea (simulada) ----------------
+let auditLog = [];
+function randHash(){
+  const chars = 'abcdef0123456789';
+  let h = '0x';
+  for(let i=0;i<8;i++) h += chars[Math.floor(Math.random()*chars.length)];
+  return h + '…' + Array.from({length:4},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+const AUDIT_TEMPLATES = [
+  ()=>`Reserva verificada contra Libro Contable — coincide ✓`,
+  ()=>`Balance de bóveda USDT confirmado por Auditor`,
+  ()=>`Firma multisig 2/3 validada on-chain`,
+  ()=>`Total en circulación auditado — dentro de MAX_SUPPLY`,
+  ()=>`Efectivo disponible conciliado con caja física`,
+  ()=>`Evento mint/burn contrastado con eventos on-chain`,
+];
+function pushAuditEntry(){
+  const text = AUDIT_TEMPLATES[Math.floor(Math.random()*AUDIT_TEMPLATES.length)]();
+  const vals = `USDT $${fmt(system.reserve.usdt)} · Externas $${fmt(system.reserve.ext)} · CUPx ${fmt(system.supply)}`;
+  auditLog.unshift({ hash: randHash(), text, vals, time: Date.now() });
+  if(auditLog.length > 20) auditLog.pop();
+}
+function timeAgo(ts){
+  const secs = Math.max(0, Math.round((Date.now()-ts)/1000));
+  if(secs < 60) return secs<=1 ? 'hace un instante' : `hace ${secs}s`;
+  const mins = Math.round(secs/60);
+  return `hace ${mins} min`;
+}
+function renderAuditStrip(){
+  const el = document.getElementById('auditLastLine');
+  if(!el) return;
+  if(auditLog.length===0){ el.textContent = 'Sin reportes aún'; return; }
+  el.textContent = 'Último reporte del Auditor · '+timeAgo(auditLog[0].time);
+}
+// Semilla inicial para que no empiece vacío
+pushAuditEntry();
+pushAuditEntry();
+
+// Cada usuario tiene su propia wallet: dirección, saldo, PIN y libro contable
+let users = {
+  carlos: { name:'Carlos', address: randAddr(), balance: 4250, pin:'1234', seed: generateSeedPhrase(12),
+    failedPin:0, lockedUntil:0, dailySent:0, dailyDate: todayKey(), alerts:[],
+    ledger: [
+      {desc:'Conversión a USDT', sub:'Retiro procesado', amt:-800, type:'burn'},
+      {desc:'Transferencia recibida', sub:'SEPA verificada · Ref #A214', amt:1200, type:'mint'},
+      {desc:'Pago interno', sub:'Comercio Q-Market', amt:-150, type:'transfer'},
+    ]},
+  maria: { name:'María', address: randAddr(), balance: 1800, pin:'1234', seed: generateSeedPhrase(12),
+    failedPin:0, lockedUntil:0, dailySent:0, dailyDate: todayKey(), alerts:[],
+    ledger: [ {desc:'Pago recibido', sub:'De Carlos', amt:300, type:'transfer'} ] },
+  operador: { name:'Operador Demo', address: randAddr(), balance: 0, pin:'1234', seed: generateSeedPhrase(12),
+    failedPin:0, lockedUntil:0, dailySent:0, dailyDate: todayKey(), alerts:[], ledger: [] },
+};
+
+// ---------------- Límites de seguridad ----------------
+const LIMIT_PER_TX = 1000;      // por encima de esto, pide confirmación extra
+const LIMIT_PER_TX_MAX = 3000;  // por encima de esto, se bloquea (requiere elevar límite)
+const LIMIT_DAILY = 3000;       // tope acumulado por día
+const MAX_PIN_ATTEMPTS = 3;
+const LOCK_MS = 30000;          // bloqueo temporal tras agotar intentos
+
+function todayKey(){ return new Date().toISOString().slice(0,10); }
+function resetDailyIfNeeded(u){
+  const t = todayKey();
+  if(u.dailyDate !== t){ u.dailyDate = t; u.dailySent = 0; }
+}
+function logAlert(u, msg){
+  u.alerts.unshift({ msg, time: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) });
+  if(u.alerts.length>6) u.alerts.pop();
+}
+
+let currentUserId = null;
+let pendingMint = null, scanStream = null, scanRAF = null;
+let simulateOffline = false;
+
+function isOnline(){ return !simulateOffline && navigator.onLine; }
+
+function toggleSimOffline(){
+  simulateOffline = !simulateOffline;
+  renderConnBadge();
+}
+function renderConnBadge(){
+  const online = isOnline();
+  document.getElementById('connDot').className = 'conn-dot ' + (online ? 'online' : 'offline');
+  document.getElementById('connLabel').textContent = online ? 'En línea' : 'Sin conexión · modo SMS';
+  document.getElementById('connBanner').className = 'conn-banner ' + (online ? 'online' : 'offline');
+}
+window.addEventListener('online', renderConnBadge);
+window.addEventListener('offline', renderConnBadge);
+
+function state(){ return users[currentUserId]; }
+
+function fmt(n){ return n.toLocaleString('es-ES', {maximumFractionDigits:0}); }
+
+// ---------------- Login / selección de usuario ----------------
+function renderUserList(){
+  const list = document.getElementById('userList');
+  list.innerHTML = Object.entries(users).map(([id,u])=>`
+    <div class="user-row" onclick="selectUser('${id}')">
+      <div class="avatar">${u.name[0]}</div>
+      <div class="info"><b>${u.name}</b><span>${u.address} · ${fmt(u.balance)} CUPx</span></div>
+    </div>`).join('');
+}
+function showLogin(){ renderUserList(); document.getElementById('loginScreen').style.display='flex'; }
+function selectUser(id){
+  currentUserId = id;
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('pillAvatar').textContent = users[id].name[0];
+  document.getElementById('pillName').textContent = users[id].name;
+  renderConnBadge();
+  render();
+}
+function createUser(){
+  const name = prompt('Nombre del nuevo usuario:');
+  if(!name) return;
+  let pin = prompt('Crea un PIN de 4 dígitos para tus operaciones:') || '1234';
+  pin = pin.replace(/\D/g,'').padEnd(4,'0').slice(0,4);
+  const id = 'u'+Date.now();
+  const seed = generateSeedPhrase(12);
+  users[id] = { name: name.trim(), address: randAddr(), balance: 500, pin, seed,
+    failedPin:0, lockedUntil:0, dailySent:0, dailyDate: todayKey(), alerts:[],
+    ledger: [{desc:'Fondos de prueba', sub:'Saldo inicial de bienvenida', amt:500, type:'mint'}] };
+  system.supply += 500;
+  system.totalMinted += 500;
+  system.reserve.usdt += 500*0.87;
+  system.reserve.ext += 500*0.13;
+  document.getElementById('loginScreen').style.display='none';
+  showSeedReveal(id);
+}
+
+// ---------------- Frase semilla: revelar + verificar antes de dar acceso ----------------
+function showSeedReveal(id){
+  const seed = users[id].seed;
+  const grid = seed.map((w,i)=>`<div class="seed-chip"><span class="seed-n">${i+1}</span>${w}</div>`).join('');
+  openRawModal(`
+    <div class="modal-title">Tu frase semilla</div>
+    <p style="color:var(--dim); font-size:12px; margin-bottom:14px; line-height:1.6;">
+      Estas 12 palabras son la única forma de recuperar tu wallet. Escríbelas en papel, en orden, y guárdalas fuera de este dispositivo. <b style="color:#F3B69B;">Nadie de Qbolax puede recuperarlas por ti si las pierdes.</b>
+    </p>
+    <div class="seed-grid">${grid}</div>
+    <div class="warn-banner" style="margin-top:14px;">⚠️ Nunca compartas estas palabras con nadie — quien las tenga, tiene tu dinero.</div>
+    <div class="modal-actions">
+      <button class="btn btn-solid" style="flex:none; width:100%;" onclick="startSeedVerify('${id}')">Ya la anoté — continuar</button>
+    </div>
+  `, false);
+}
+function startSeedVerify(id){
+  const seed = users[id].seed;
+  let a = Math.floor(Math.random()*6);        // posición 1-6
+  let b = 6 + Math.floor(Math.random()*6);    // posición 7-12
+  openRawModal(`
+    <div class="modal-title">Confirma tu frase semilla</div>
+    <p style="color:var(--dim); font-size:12px; margin-bottom:16px;">Para asegurarnos de que la anotaste bien, escribe estas dos palabras:</p>
+    <div class="field"><label>Palabra #${a+1}</label><input id="seedCheckA" placeholder="palabra ${a+1}"></div>
+    <div class="field"><label>Palabra #${b+1}</label><input id="seedCheckB" placeholder="palabra ${b+1}"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="showSeedReveal('${id}')">Volver a verla</button>
+      <button class="btn btn-solid" onclick="confirmSeedVerify('${id}', ${a}, ${b})">Confirmar</button>
+    </div>
+  `, false);
+}
+function confirmSeedVerify(id, a, b){
+  const seed = users[id].seed;
+  const va = (document.getElementById('seedCheckA').value||'').trim().toLowerCase();
+  const vb = (document.getElementById('seedCheckB').value||'').trim().toLowerCase();
+  if(va !== seed[a] || vb !== seed[b]){
+    showToast('No coinciden — revisa el orden y vuelve a intentar');
+    return;
+  }
+  document.getElementById('modalOverlay').style.display='none';
+  selectUser(id);
+  showToast('Wallet creada y frase semilla confirmada ✓');
+}
+function openRawModal(html, closable){
+  document.getElementById('modalBody').innerHTML = html + (closable===false ? '' : '');
+  document.getElementById('modalOverlay').style.display = 'flex';
+}
+function requestSeedReveal(){
+  const u = state();
+  const pin = prompt('Ingresa tu PIN para ver tu frase semilla:');
+  if(pin !== u.pin){ showToast('PIN incorrecto'); return; }
+  logAlert(u, 'Frase semilla consultada desde el dispositivo');
+  render();
+  showSeedReveal(currentUserId);
+}
+
+function addTestFunds(){
+  const u = state();
+  const amt = 500;
+  u.balance += amt;
+  system.supply += amt;
+  system.totalMinted += amt;
+  system.reserve.usdt += amt * 0.87;
+  system.reserve.ext += amt * 0.13;
+  u.ledger.unshift({desc:'Fondos de prueba', sub:'Agregado manualmente para pruebas', amt:amt, type:'mint'});
+  render();
+  showToast('+'+amt+' CUPx de prueba agregados');
+}
+
+renderUserList();
+renderConnBadge();
+
+// ---------------- Panel de respaldo "en vivo": se refresca cada 2.5s ----------------
+let lastRefresh = Date.now();
+setInterval(()=>{
+  if(!currentUserId) return; // aún en la pantalla de login
+  render();
+  lastRefresh = Date.now();
+}, 2500);
+setInterval(()=>{
+  const el = document.getElementById('liveAgo');
+  if(!el) return;
+  const secs = Math.round((Date.now()-lastRefresh)/1000);
+  el.textContent = secs<=1 ? 'actualizado ahora' : `actualizado hace ${secs}s`;
+  renderAuditStrip();
+}, 1000);
+
+// Nuevo reporte de auditoría cada 7-10s (simulado)
+function scheduleNextAudit(){
+  const delay = 7000 + Math.random()*3000;
+  setTimeout(()=>{
+    if(currentUserId){ pushAuditEntry(); renderAuditStrip(); }
+    scheduleNextAudit();
+  }, delay);
+}
+scheduleNextAudit();
+
+function render(){
+  const u = state();
+  document.getElementById('balanceVal').innerHTML = fmt(u.balance)+'<span>CUPx</span>';
+  document.getElementById('balanceUsd').textContent = '≈ '+(u.balance*0.0028).toFixed(2)+' USD';
+
+  const totalReserve = system.reserve.usdt + system.reserve.ext;
+  const ratio = Math.min(1, totalReserve / system.supply);
+  const circumference = 339.3; // 2πr con r=54 (gauge grande)
+  document.getElementById('gaugeFill').style.strokeDashoffset = circumference - (circumference*ratio);
+  document.getElementById('gaugePct').textContent = Math.round(ratio*100)+'%';
+
+  const cash = Math.max(0, system.cashAvailable);
+  const totalBacking = system.reserve.usdt + system.reserve.ext + cash;
+  document.getElementById('rTotal').textContent = '$'+fmt(totalBacking);
+  document.getElementById('rUsdt').textContent = '$'+fmt(system.reserve.usdt);
+  document.getElementById('rExt').textContent = '$'+fmt(system.reserve.ext);
+  document.getElementById('rCash').textContent = '$'+fmt(cash);
+  document.getElementById('rSupply').textContent = fmt(system.supply)+' CUPx';
+  document.getElementById('rBurned').textContent = fmt(system.totalBurned)+' CUPx';
+
+  const maxComp = Math.max(system.reserve.usdt, system.reserve.ext, cash, 1);
+  document.getElementById('rUsdtBar').style.width = (system.reserve.usdt/maxComp*100)+'%';
+  document.getElementById('rExtBar').style.width = (system.reserve.ext/maxComp*100)+'%';
+  document.getElementById('rCashBar').style.width = (cash/maxComp*100)+'%';
+
+  renderAuditStrip();
+
+  resetDailyIfNeeded(u);
+  const alertsEl = document.getElementById('alertsPanel');
+  if(u.alerts.length===0){
+    alertsEl.innerHTML = `<div class="alerts-empty">Sin alertas — todo en orden ✓</div>`;
+  } else {
+    alertsEl.innerHTML = u.alerts.map(a=>`
+      <div class="alert-item">
+        <span class="ico">⚠️</span>
+        <span class="txt">${a.msg}</span>
+        <span class="time">${a.time}</span>
+      </div>`).join('') +
+      `<div class="limit-note">Límite por transacción: ${fmt(LIMIT_PER_TX)} CUPx (máx. ${fmt(LIMIT_PER_TX_MAX)}) · Usado hoy: ${fmt(u.dailySent)} / ${fmt(LIMIT_DAILY)} CUPx</div>`;
+  }
+  if(u.alerts.length===0){
+    alertsEl.innerHTML += `<div class="limit-note">Límite por transacción: ${fmt(LIMIT_PER_TX)} CUPx (máx. ${fmt(LIMIT_PER_TX_MAX)}) · Usado hoy: ${fmt(u.dailySent)} / ${fmt(LIMIT_DAILY)} CUPx</div>`;
+  }
+
+  const ledgerEl = document.getElementById('ledger');
+  ledgerEl.innerHTML = u.ledger.map(item=>{
+    const color = item.pending ? 'var(--coral)' : item.type==='mint' ? 'var(--mint)' : item.type==='burn' ? 'var(--coral)' : 'var(--gold)';
+    const sign = item.amt>0?'+':'';
+    return `<div class="ledger-item">
+      <div class="li-left">
+        <div class="li-dot ${item.pending?'blink':''}" style="background:${color}"></div>
+        <div class="li-desc"><b>${item.desc}</b><div class="li-sub">${item.sub}</div></div>
+      </div>
+      <div class="li-amt ${item.amt>0?'pos':'neg'}">${sign}${fmt(item.amt)} CUPx</div>
+    </div>`;
+  }).join('');
+
+  renderMultisig();
+}
+
+function renderMultisig(){
+  const steps = ['stepOperador','stepAuditor','stepAdmin'];
+  steps.forEach((id,i)=>{
+    const el = document.getElementById(id);
+    if(i < system.msStep){ el.classList.add('done'); el.lastChild.textContent = i===0?'verificado':i===1?'auditado':'ejecutado'; }
+    else { el.classList.remove('done'); el.lastChild.textContent = 'pendiente'; }
+  });
+  const cta = document.getElementById('msCta');
+  const done = document.getElementById('msDone');
+  if(system.msStep===0){
+    document.getElementById('msRef').textContent='—';
+    document.getElementById('msAmount').textContent='—';
+    cta.style.display='block'; cta.disabled=false; cta.textContent='Simular llegada de transferencia';
+    done.style.display='none';
+  } else if(system.msStep < 3){
+    cta.style.display='block'; cta.disabled=true;
+    cta.textContent = system.msStep===1 ? 'Auditor firmando…' : 'Administrador firmando…';
+    done.style.display='none';
+  } else {
+    cta.style.display='none';
+    done.style.display='block';
+  }
+}
+
+function advanceMultisig(){
+  const cta = document.getElementById('msCta');
+  cta.disabled = true;
+  pendingMint = { amount: 500, ref: '#B'+Math.floor(100+Math.random()*900) };
+  document.getElementById('msRef').textContent = pendingMint.ref;
+  document.getElementById('msAmount').textContent = fmt(pendingMint.amount)+' CUPx';
+
+  system.msStep = 1;
+  renderMultisig();
+  showToast('Paso 1/3 — Operador registró la transferencia');
+
+  setTimeout(()=>{
+    system.msStep = 2;
+    renderMultisig();
+    showToast('Paso 2/3 — Auditor validó el monto');
+  }, 900);
+
+  setTimeout(()=>{
+    system.msStep = 3;
+    const u = state();
+    u.balance += pendingMint.amount;
+    system.supply += pendingMint.amount;
+    system.totalMinted += pendingMint.amount;
+    system.reserve.usdt += pendingMint.amount * 0.87;
+    system.reserve.ext += pendingMint.amount * 0.13;
+    u.ledger.unshift({desc:'Emisión aprobada', sub:'Ref '+pendingMint.ref+' · 2/3 firmas', amt:pendingMint.amount, type:'mint'});
+    render();
+    showToast('Paso 3/3 — Administrador ejecutó mint(): CUPx acreditado');
+  }, 1800);
+
+  setTimeout(()=>{ system.msStep = 0; render(); }, 4200);
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function openModal(kind){
+  const overlay = document.getElementById('modalOverlay');
+  const body = document.getElementById('modalBody');
+  let html = '';
+  if(kind==='send'){
+    const others = Object.values(users).filter(u=>u!==state());
+    html = `<div class="modal-title">Enviar CUPx</div>
+      <div class="field"><label>Dirección</label><input id="sendTo" list="userAddrs" placeholder="cupx1..."></div>
+      <datalist id="userAddrs">${others.map(u=>`<option value="${u.address}">${u.name}</option>`).join('')}</datalist>
+      <div class="field"><label>Monto (CUPx)</label><input id="sendAmt" type="number" placeholder="0"></div>
+      ${isOnline() ? '' : smsCommandPreview('CUPX ENVIAR &lt;monto&gt; &lt;destino&gt; &lt;pin&gt;')}
+      ${pinFieldHtml()}
+      <p style="color:var(--dim); font-size:11.5px;">Cuentas demo disponibles: ${others.map(u=>u.name).join(', ')}</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-solid" onclick="doSend()">${isOnline() ? 'Enviar' : 'Enviar por SMS'}</button>
+      </div>`;
+  } else if(kind==='receive'){
+    html = `<div class="modal-title">Cobrar con código QR</div>
+      <div class="field"><label>Monto a solicitar (opcional)</label><input id="qrAmt" type="number" placeholder="0" oninput="renderQr()"></div>
+      <div class="qr-frame"><canvas id="qrCanvas" width="220" height="220"></canvas></div>
+      <div class="qr-caption" id="qrCaption">cupx1q...z83k</div>
+      <div class="copy-row">
+        <span class="addr-text" id="addrText">${state().address}</span>
+        <button class="copy-btn" id="copyBtn" onclick="copyAddress()">Copiar</button>
+      </div>
+      <p style="color:var(--dim); font-size:12.5px; line-height:1.6;">Quien escanee este código con "Pagar QR" verá el monto pre-cargado y podrá confirmar el envío al instante.</p>
+      <div class="modal-actions">
+        <button class="btn btn-solid" style="flex:none; width:100%;" onclick="closeModal()">Cerrar</button>
+      </div>`;
+  } else if(kind==='scanqr'){
+    html = `<div class="modal-title">Pagar por código QR</div>
+      <div class="scan-box" id="scanBox">
+        <video id="scanVideo" autoplay playsinline muted></video>
+        <div class="scan-reticle"></div>
+      </div>
+      <div class="scan-status" id="scanStatus">Solicitando acceso a la cámara…</div>
+      <canvas id="scanCanvas" style="display:none;"></canvas>
+      <div class="divider-or">o pega el código manualmente</div>
+      <div class="field"><input id="qrManual" placeholder='{"to":"cupx1q...","amount":300}'></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="stopScan(); closeModal();">Cancelar</button>
+        <button class="btn btn-solid" onclick="decodeManualQr()">Usar código pegado</button>
+      </div>`;
+  } else if(kind==='security'){
+    html = `<div class="modal-title">Seguridad de la wallet</div>
+      <p style="color:var(--dim); font-size:12px; margin-bottom:16px; line-height:1.5;">
+        Cinco capas trabajando juntas para proteger tus CUPx — de tu clave privada hasta la emisión del sistema.
+      </p>
+
+      <div class="sec-section">
+        <div class="sec-head"><span class="sec-num">1</span><span class="sec-title">Custodia de tu clave privada</span></div>
+        <ul class="sec-list">
+          <li>Custodia híbrida — tú controlas tu clave, nadie mueve tus fondos sin tu autorización</li>
+          <li>Clave cifrada AES-256 en el Secure Enclave/Keystore del dispositivo</li>
+          <li>Desbloqueo con PIN, huella o FaceID</li>
+          <li>Recuperación por frase semilla única (BIP-39, 12 palabras) — solo tú la ves, nunca se guarda en el servidor</li>
+        </ul>
+        <div class="sec-link-btn" onclick="requestSeedReveal()">🔑 Ver mi frase semilla (pide tu PIN)</div>
+      </div>
+
+      <div class="sec-section">
+        <div class="sec-head"><span class="sec-num">2</span><span class="sec-title">Autenticación por operación</span></div>
+        <ul class="sec-list">
+          <li>PIN obligatorio en cada envío, conversión o pago</li>
+          <li>3 PIN incorrectos → bloqueo temporal de 30s</li>
+          <li>Límite de ${fmt(LIMIT_PER_TX)} CUPx por transacción (confirmación extra), tope duro ${fmt(LIMIT_PER_TX_MAX)}</li>
+          <li>Límite diario acumulado de ${fmt(LIMIT_DAILY)} CUPx por cuenta</li>
+        </ul>
+      </div>
+
+      <div class="sec-section">
+        <div class="sec-head"><span class="sec-num">3</span><span class="sec-title">Control de emisión</span></div>
+        <ul class="sec-list">
+          <li>Transferencias internas nunca crean CUPx nuevo — solo mueven saldo existente</li>
+          <li>Emitir CUPx requiere multisig 2 de 3 (Operador → Auditor → Administrador)</li>
+          <li>Tope duro MAX_SUPPLY en el contrato — infranqueable aunque las 3 firmas estén de acuerdo</li>
+        </ul>
+      </div>
+
+      <div class="sec-section">
+        <div class="sec-head"><span class="sec-num">4</span><span class="sec-title">Protección en retiros</span></div>
+        <ul class="sec-list">
+          <li>Retiros a USDT: solo direcciones válidas en red BEP20, con aviso de riesgo de red equivocada</li>
+          <li>Retiros en efectivo: requieren nombre, carnet, teléfono y dirección de entrega</li>
+        </ul>
+      </div>
+
+      <div class="sec-section">
+        <div class="sec-head"><span class="sec-num">5</span><span class="sec-title">Transparencia verificable</span></div>
+        <ul class="sec-list">
+          <li>Panel de reserva en vivo — respaldo real frente a CUPx en circulación</li>
+          <li>Auditoría en línea con referencia tipo hash en cada verificación</li>
+        </ul>
+      </div>
+
+      <div class="sec-pending">
+        <div class="sec-title">⚠️ Pendiente antes de manejar dinero real</div>
+        <ul>
+          <li>El PIN y los límites hoy solo viven en este prototipo (cliente) — el backend/contrato debe exigir lo mismo del lado del servidor</li>
+          <li>Definir custodia de la reserva misma (¿wallet fría? ¿multisig también?)</li>
+          <li>Auditoría externa del contrato antes de producción</li>
+        </ul>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-solid" style="flex:none; width:100%;" onclick="closeModal()">Cerrar</button>
+      </div>`;
+  } else if(kind==='audit'){
+    html = `<div class="modal-title">Auditoría en línea</div>
+      <p style="color:var(--dim); font-size:12px; margin-bottom:14px; line-height:1.5;">
+        Cada verificación queda registrada con una referencia tipo hash, igual que un evento auditable en blockchain. En producción, estas entradas vendrían de los eventos reales del contrato (MintExecuted, Redeemed, ReserveUpdated).
+      </p>
+      ${auditLog.map(a=>`
+        <div class="audit-log-item">
+          <div>
+            <div>${a.text}</div>
+            <div class="vals">${a.vals}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="hash">${a.hash}</div>
+            <div class="when">${timeAgo(a.time)}</div>
+          </div>
+        </div>`).join('')}
+      <div class="modal-actions">
+        <button class="btn btn-solid" style="flex:none; width:100%;" onclick="closeModal()">Cerrar</button>
+      </div>`;
+  } else if(kind==='convert'){
+    html = `<div class="modal-title">Convertir CUPx ⇄ USDT</div>
+      <div class="field"><label>Monto en CUPx</label><input id="convAmt" type="number" placeholder="0"></div>
+      <div class="field"><label>Destino</label>
+        <select id="convDest" onchange="toggleConvertAddr()">
+          <option>USDT (billetera externa)</option>
+          <option>USD físico (retiro)</option>
+        </select>
+      </div>
+      <div id="convAddrBlock">
+        <div class="field"><label>Dirección de retiro (USDT · red BEP20)</label>
+          <input id="convAddr" placeholder="0x..." style="font-family:'JetBrains Mono',monospace; font-size:12.5px;"></div>
+        <div class="warn-banner">
+          ⚠️ Solo se admite la red <b>BEP20 (BNB Chain)</b> para retiros de USDT. Si envías a una dirección de otra red (ERC20, TRC20, etc.), el dinero se pierde de forma irreversible.
+        </div>
+      </div>
+      <div id="convCashBlock" style="display:none;">
+        <p style="color:var(--dim); font-size:11.5px; margin:2px 0 12px;">Datos del destinatario para la entrega física del efectivo:</p>
+        <div class="field"><label>Nombre y apellidos</label><input id="cashName" placeholder="Nombre completo"></div>
+        <div class="field"><label>Número de carnet de identidad</label><input id="cashCi" placeholder="00000000000" maxlength="11" inputmode="numeric"></div>
+        <div class="field"><label>Número de teléfono</label><input id="cashPhone" placeholder="+53 5xxxxxxx" inputmode="tel"></div>
+        <div class="field"><label>Dirección de entrega</label><input id="cashAddr" placeholder="Calle, número, municipio, provincia"></div>
+      </div>
+      ${isOnline() ? '' : smsCommandPreview('CUPX CONVERTIR &lt;monto&gt; &lt;pin&gt;')}
+      ${pinFieldHtml()}
+      <p style="color:var(--dim); font-size:12px;">Esta operación quema los CUPx convertidos, reduciendo el total en circulación.</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-solid" onclick="doConvert()">${isOnline() ? 'Convertir' : 'Convertir por SMS'}</button>
+      </div>`;
+  }
+  body.innerHTML = html;
+  overlay.style.display = 'flex';
+  if(kind==='receive'){ renderQr(); }
+  if(kind==='scanqr'){ startScan(); }
+  if(kind==='convert'){ toggleConvertAddr(); }
+}
+function toggleConvertAddr(){
+  const dest = document.getElementById('convDest')?.value || '';
+  const addrBlock = document.getElementById('convAddrBlock');
+  const cashBlock = document.getElementById('convCashBlock');
+  if(!addrBlock || !cashBlock) return;
+  const isUsdt = dest.startsWith('USDT');
+  addrBlock.style.display = isUsdt ? 'block' : 'none';
+  cashBlock.style.display = isUsdt ? 'none' : 'block';
+}
+function closeModal(){ stopScan(); document.getElementById('modalOverlay').style.display='none'; }
+
+function copyAddress(){
+  const addr = state().address;
+  const btn = document.getElementById('copyBtn');
+  const markCopied = ()=>{
+    btn.textContent = '¡Copiado!';
+    btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 1800);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(addr).then(markCopied).catch(()=>fallbackCopy(addr, markCopied));
+  } else {
+    fallbackCopy(addr, markCopied);
+  }
+}
+function fallbackCopy(text, onDone){
+  const temp = document.createElement('textarea');
+  temp.value = text;
+  temp.style.position = 'fixed';
+  temp.style.opacity = '0';
+  document.body.appendChild(temp);
+  temp.focus(); temp.select();
+  try{
+    document.execCommand('copy');
+    onDone();
+  }catch(e){
+    showToast('No se pudo copiar — selecciona el texto manualmente');
+  }
+  document.body.removeChild(temp);
+}
+
+// ---------------- QR: generar (cobrar) ----------------
+function renderQr(){
+  const u = state();
+  const amt = parseFloat(document.getElementById('qrAmt')?.value) || null;
+  const payload = { to: u.address, amount: amt, ref: 'QR-'+Math.floor(1000+Math.random()*8999) };
+  const text = JSON.stringify(payload);
+  try{
+    new QRious({ element: document.getElementById('qrCanvas'), value: text, size: 220, background:'#F2ECE0', foreground:'#0E1B2A', level:'M' });
+  }catch(e){}
+  document.getElementById('qrCaption').textContent = amt ? `${u.name} solicita ${fmt(amt)} CUPx` : u.address;
+}
+
+// ---------------- QR: escanear (pagar) ----------------
+function startScan(){
+  const video = document.getElementById('scanVideo');
+  const status = document.getElementById('scanStatus');
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    status.textContent = 'Cámara no disponible en este entorno — usa el campo manual abajo.';
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(stream=>{
+      scanStream = stream;
+      video.srcObject = stream;
+      status.textContent = 'Apunta al código QR…';
+      scanLoop();
+    })
+    .catch(()=>{
+      status.textContent = 'Sin acceso a la cámara — usa el campo manual abajo.';
+    });
+}
+function scanLoop(){
+  const video = document.getElementById('scanVideo');
+  const canvas = document.getElementById('scanCanvas');
+  if(!video || video.readyState !== video.HAVE_ENOUGH_DATA){
+    scanRAF = requestAnimationFrame(scanLoop);
+    return;
+  }
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const code = jsQR(imageData.data, imageData.width, imageData.height);
+  if(code){
+    handleScannedPayload(code.data);
+  } else {
+    scanRAF = requestAnimationFrame(scanLoop);
+  }
+}
+function stopScan(){
+  if(scanRAF) cancelAnimationFrame(scanRAF);
+  if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream = null; }
+}
+function decodeManualQr(){
+  const raw = document.getElementById('qrManual').value.trim();
+  if(!raw){ showToast('Pega un código válido'); return; }
+  handleScannedPayload(raw);
+}
+function handleScannedPayload(raw){
+  stopScan();
+  let payload;
+  try{ payload = JSON.parse(raw); }
+  catch(e){ payload = { to: raw, amount: null }; }
+  const status = document.getElementById('scanStatus');
+  if(status) status.textContent = 'Código detectado ✓';
+  confirmQrPayment(payload);
+}
+function confirmQrPayment(payload){
+  const amt = payload.amount || 0;
+  const body = document.getElementById('modalBody');
+  body.innerHTML = `<div class="modal-title">Confirmar pago</div>
+    <div class="field"><label>Destinatario</label><input value="${payload.to || 'desconocido'}" readonly></div>
+    <div class="field"><label>Monto (CUPx)</label><input id="qrPayAmt" type="number" value="${amt || ''}" placeholder="0"></div>
+    ${isOnline() ? '' : smsCommandPreview('CUPX ENVIAR &lt;monto&gt; '+(payload.to||'')+' &lt;pin&gt;')}
+    ${pinFieldHtml()}
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-solid" onclick="doQrPay('${(payload.to||'destinatario').replace(/'/g,"")}')">${isOnline() ? 'Confirmar y pagar' : 'Confirmar por SMS'}</button>
+    </div>`;
+}
+function doQrPay(to){
+  const amt = parseFloat(document.getElementById('qrPayAmt').value) || 0;
+  const u = state();
+  if(amt<=0 || amt>u.balance){ showToast('Monto inválido'); return; }
+  if(!checkPinAndLimits(amt)) return;
+
+  if(isOnline()){
+    u.balance -= amt;
+    u.ledger.unshift({desc:'Pago por QR', sub:to, amt:-amt, type:'transfer'});
+    creditIfInternal(to, amt, 'Pago por QR recibido');
+    closeModal(); render(); showToast('Pago por QR simulado con éxito');
+  } else {
+    const pin = document.getElementById('txPin')?.value || '----';
+    closeModal();
+    queueSmsAction('Pago QR por SMS', `CUPX ENVIAR ${amt} ${to} ${pin}`, ()=>{
+      u.balance -= amt;
+      u.ledger.unshift({desc:'Pago por QR confirmado <span class="sms-pill">SMS</span>', sub:to, amt:-amt, type:'transfer'});
+      creditIfInternal(to, amt, 'Pago por QR recibido');
+    });
+  }
+}
+
+function findUserByAddress(addr){
+  return Object.values(users).find(u=>u.address===addr);
+}
+function creditIfInternal(addr, amt, label){
+  const recipient = findUserByAddress(addr);
+  if(recipient){
+    recipient.balance += amt;
+    recipient.ledger.unshift({desc:label, sub:'De '+state().name, amt:amt, type:'transfer'});
+  }
+}
+
+// ---------------- Modo sin conexión: cola de comandos SMS ----------------
+function queueSmsAction(commandLabel, commandText, applyFn){
+  const u = state();
+  const entry = {desc:commandLabel, sub:'Vía SMS · enviando a gateway…', amt:0, type:'sms-pending', pending:true};
+  u.ledger.unshift(entry);
+  render();
+  showToast('Enviando comando por SMS…');
+
+  setTimeout(()=>{
+    entry.sub = 'Vía SMS · esperando confirmación del gateway…';
+    render();
+  }, 1100);
+
+  setTimeout(()=>{
+    const idx = u.ledger.indexOf(entry);
+    if(idx>-1) u.ledger.splice(idx,1);
+    applyFn();
+    showToast('Confirmado por SMS ✓');
+    render();
+  }, 3200);
+}
+function smsCommandPreview(cmd){
+  return `<div class="field"><label>Comando que se enviará por SMS</label>
+    <input readonly value='${cmd}' style="font-size:12px;"></div>`;
+}
+function pinFieldHtml(){
+  return `<div class="field"><label>PIN de operaciones</label>
+    <input id="txPin" type="password" placeholder="••••" maxlength="6" inputmode="numeric"></div>`;
+}
+
+/**
+ * Verifica PIN, bloqueo temporal y límites de transacción antes de mover CUPx.
+ * Devuelve true si puede continuar; false si debe abortarse (ya muestra el toast/alerta).
+ */
+function checkPinAndLimits(amount){
+  const u = state();
+  resetDailyIfNeeded(u);
+
+  const now = Date.now();
+  if(now < u.lockedUntil){
+    const secs = Math.ceil((u.lockedUntil-now)/1000);
+    showToast('Cuenta bloqueada por seguridad — intenta en '+secs+'s');
+    return false;
+  }
+
+  const pinInput = document.getElementById('txPin');
+  const enteredPin = pinInput ? pinInput.value : '';
+  if(enteredPin !== u.pin){
+    u.failedPin += 1;
+    if(u.failedPin >= MAX_PIN_ATTEMPTS){
+      u.lockedUntil = now + LOCK_MS;
+      u.failedPin = 0;
+      logAlert(u, 'Cuenta bloqueada 30s por 3 intentos de PIN incorrectos');
+      showToast('PIN incorrecto 3 veces — cuenta bloqueada temporalmente');
+    } else {
+      logAlert(u, `PIN incorrecto (intento ${u.failedPin}/${MAX_PIN_ATTEMPTS})`);
+      showToast('PIN incorrecto');
+    }
+    render();
+    return false;
+  }
+  u.failedPin = 0;
+
+  if(amount > LIMIT_PER_TX_MAX){
+    logAlert(u, `Envío de ${fmt(amount)} CUPx bloqueado — supera el límite máximo por transacción`);
+    showToast('Supera el límite máximo por transacción ('+fmt(LIMIT_PER_TX_MAX)+' CUPx)');
+    render();
+    return false;
+  }
+  if(u.dailySent + amount > LIMIT_DAILY){
+    logAlert(u, `Envío de ${fmt(amount)} CUPx bloqueado — supera tu límite diario`);
+    showToast('Supera tu límite diario ('+fmt(LIMIT_DAILY)+' CUPx)');
+    render();
+    return false;
+  }
+  if(amount > LIMIT_PER_TX){
+    const ok = confirm(`Este envío de ${fmt(amount)} CUPx supera el límite estándar (${fmt(LIMIT_PER_TX)} CUPx). ¿Confirmas de todas formas?`);
+    if(!ok) return false;
+    logAlert(u, `Envío grande confirmado manualmente: ${fmt(amount)} CUPx`);
+  }
+
+  u.dailySent += amount;
+  return true;
+}
+
+function doSend(){
+  const amt = parseFloat(document.getElementById('sendAmt').value) || 0;
+  const u = state();
+  const to = document.getElementById('sendTo').value || 'destinatario';
+  if(amt<=0 || amt>u.balance){ showToast('Monto inválido'); return; }
+  if(!checkPinAndLimits(amt)) return;
+
+  if(isOnline()){
+    u.balance -= amt;
+    u.ledger.unshift({desc:'Envío realizado', sub:to, amt:-amt, type:'transfer'});
+    creditIfInternal(to, amt, 'Transferencia recibida');
+    closeModal(); render(); showToast('Envío simulado con éxito');
+  } else {
+    const pin = document.getElementById('txPin')?.value || '----';
+    closeModal();
+    queueSmsAction('Envío por SMS', `CUPX ENVIAR ${amt} ${to} ${pin}`, ()=>{
+      u.balance -= amt;
+      u.ledger.unshift({desc:'Envío confirmado <span class="sms-pill">SMS</span>', sub:to, amt:-amt, type:'transfer'});
+      creditIfInternal(to, amt, 'Transferencia recibida');
+    });
+  }
+}
+function doConvert(){
+  const amt = parseFloat(document.getElementById('convAmt').value) || 0;
+  const u = state();
+  const dest = document.getElementById('convDest').value;
+  const isUsdt = dest.startsWith('USDT');
+  const addr = document.getElementById('convAddr')?.value.trim() || '';
+
+  if(amt<=0 || amt>u.balance){ showToast('Monto inválido'); return; }
+
+  let cash = null;
+  if(isUsdt){
+    if(!addr){ showToast('Ingresa la dirección de retiro (red BEP20)'); return; }
+    if(!/^0x[a-fA-F0-9]{40}$/.test(addr)){
+      showToast('Esa no parece una dirección BEP20 válida (debe empezar con 0x y tener 42 caracteres)');
+      return;
+    }
+  } else {
+    cash = {
+      name: document.getElementById('cashName')?.value.trim() || '',
+      ci: document.getElementById('cashCi')?.value.trim() || '',
+      phone: document.getElementById('cashPhone')?.value.trim() || '',
+      addr: document.getElementById('cashAddr')?.value.trim() || '',
+    };
+    if(!cash.name || !cash.ci || !cash.phone || !cash.addr){
+      showToast('Completa nombre, carnet, teléfono y dirección de entrega');
+      return;
+    }
+    if(!/^\d{11}$/.test(cash.ci)){
+      showToast('El carnet de identidad debe tener 11 dígitos');
+      return;
+    }
+  }
+
+  if(!checkPinAndLimits(amt)) return;
+
+  const destLabel = isUsdt
+    ? `USDT · BEP20 · ${addr.slice(0,6)}…${addr.slice(-4)}`
+    : `Efectivo · entrega a ${cash.name}`;
+
+  const apply = ()=>{
+    u.balance -= amt; system.supply -= amt; system.totalBurned += amt;
+    if(isUsdt){
+      const fromUsdt = Math.min(system.reserve.usdt, amt*0.87);
+      system.reserve.usdt -= fromUsdt; system.reserve.ext -= (amt-fromUsdt);
+    } else {
+      system.cashAvailable -= amt*0.0028; // aprox. a USD según tasa P2P
+    }
+  };
+
+  if(isOnline()){
+    apply();
+    u.ledger.unshift({desc:'Conversión a '+destLabel, sub: isUsdt ? 'CUPx quemados' : `CI ${cash.ci} · ${cash.phone} · ${cash.addr}`, amt:-amt, type:'burn'});
+    closeModal(); render(); showToast('Conversión simulada — CUPx quemados');
+  } else {
+    const pin = document.getElementById('txPin')?.value || '----';
+    closeModal();
+    const cmdDest = isUsdt ? ` ${addr}` : ` ${cash.ci}`;
+    queueSmsAction('Conversión por SMS', `CUPX CONVERTIR ${amt}${cmdDest} ${pin}`, ()=>{
+      apply();
+      u.ledger.unshift({desc:'Conversión confirmada <span class="sms-pill">SMS</span>', sub: isUsdt ? ('CUPx quemados · '+destLabel) : `CI ${cash.ci} · ${cash.phone} · ${cash.addr}`, amt:-amt, type:'burn'});
+    });
+  }
+}
+
+
+</script>
+</body>
+</html>
